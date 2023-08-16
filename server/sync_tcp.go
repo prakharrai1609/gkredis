@@ -19,6 +19,14 @@ func readCommand(conn net.Conn) (string, error) {
 	return string(buffer[:n]), err
 }
 
+func respond(command string, conn net.Conn) error {
+	if _, err := conn.Write([]byte(command)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func RunSyncTcpServer() {
 	log.Printf("Starting a synchronous tcp server at %s::%d!", config.Host, config.Port)
 
@@ -39,7 +47,7 @@ func RunSyncTcpServer() {
 
 		concurrent_clients += 1
 
-		log.Println("Client with address -> ", conn.RemoteAddr(), " disconnected, concurrent client count -> ", concurrent_clients)
+		log.Println("Client with address -> ", conn.RemoteAddr(), " connected, concurrent client count -> ", concurrent_clients)
 		go func() {
 			for {
 				command, err := readCommand(conn)
@@ -47,7 +55,7 @@ func RunSyncTcpServer() {
 				if err != nil {
 					conn.Close()
 					concurrent_clients -= 1
-					log.Println("Client with address -> ", conn.RemoteAddr(), ", concurrent client count -> ", concurrent_clients)
+					log.Println("Client with address -> ", conn.RemoteAddr(), " disconnected, concurrent client count -> ", concurrent_clients)
 
 					if err == io.EOF {
 						break
@@ -58,6 +66,9 @@ func RunSyncTcpServer() {
 
 				log.Println("command > ", command)
 
+				if err = respond(command, conn); err != nil {
+					log.Print("err write:", err)
+				}
 			}
 		}()
 	}
